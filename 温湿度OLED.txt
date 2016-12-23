@@ -1,0 +1,46 @@
+#include <dht11.h>
+#include <U8glib.h>
+#include<SHT2x.h>
+U8GLIB_SH1106_128X64 u8g(U8G_I2C_OPT_NONE);//A4、A5分别是SDA=A4和SCL=A5,OLEDSH1106驱动
+#define DHT11PIN 23
+
+float sensor_tem;
+float sensor_hum;
+void draw(void) 
+{
+u8g.setFont(u8g_font_gdr25);//字体设置
+u8g.setPrintPos(20, 30);
+   delay(100);
+   u8g.print(sensor_tem, 1);
+   u8g.setPrintPos(100, 30);
+   u8g.print("C");
+   delay(5);
+   u8g.setPrintPos(20, 58);
+   u8g.print(sensor_hum, 1);
+   u8g.setPrintPos(100, 58);
+   u8g.print("%");
+    delay(200);
+
+}
+void setup(void){
+}
+void loop(void) {
+   u8g.firstPage();  
+   do {
+     draw();
+     long x = random(0,127);
+     long y = random(51,63);
+     
+  } 
+  while( u8g.nextPage() );
+   delay(50);
+}
+void read()
+{
+  sensor_tem=SHT2x.GetTemperature() ;//把获得的温度值赋给变量sensor_tem
+  sensor_hum=SHT2x.GetHumidity();
+  Serial.println(sensor_tem);//将数据从Arduino传递到PC且单独占据一行，此数据可在串口监视器中看到
+  Serial.print("--");   
+  Serial.println(sensor_hum);
+  delay(100);
+}

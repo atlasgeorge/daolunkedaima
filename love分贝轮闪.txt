@@ -1,0 +1,36 @@
+#define mic A0
+int k=1;
+int pinmin=10;
+int pinmax=13;
+
+void setup(){
+  Serial.begin(115200);
+  pinMode(10,OUTPUT);
+  pinMode(11,OUTPUT);
+  pinMode(12,OUTPUT);
+  pinMode(13,OUTPUT);
+  pinMode(mic,OUTPUT);
+}
+
+void loop(){
+  int v=analogRead(mic);
+  Serial.print(v);
+  Serial.print(" ");
+  if(v>=1&&v<=20) light(10);
+  if(v>=20&&v<40) light(11);
+  if(v>=40&&v<60) light(12);
+  if(v>=60) light(13);
+  //if(v>=630&&v<640) light(5);
+  //if(v>=640&&v<650) light(6);
+  //if(v>=650&&v<660) light(7);
+  //if(v>=660&&v<670) light(8);
+  //if(v>=670&&v<680) light(9);
+  //if(v>=680&&v<690) light(10);
+}
+
+void light(int i){
+  for(int j=10;j<=13;j++){
+      digitalWrite(j,LOW);
+  }
+  digitalWrite(i,HIGH);
+}

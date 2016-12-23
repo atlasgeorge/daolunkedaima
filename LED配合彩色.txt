@@ -1,0 +1,86 @@
+/*
+fft_adc_serial.pde
+guest openmusiclabs.com 7.7.14
+example sketch for testing the fft library.
+it takes in data on ADC0 (Analog0) and processes them
+with the fft. the data is sent out over the serial
+port at 115.2kb.
+*/
+
+#define LOG_OUT 1 // use the log output function
+#define FFT_N 256 // set to 256 point fft
+
+#include <FFT.h> // include the library
+#include<Adafruit_NeoPixel.h>
+#define pinnum 10
+#define pin 2
+#define vmin 0
+#define vmax 255
+
+int r[10]={25,0,180,0,0,250,105,255,255,178};
+int g[10]={105,0,82,255,139,165,139,69,0,34};
+int b[10]={112,205,205,127,0,0,0,0,34,34};
+
+Adafruit_NeoPixel strip=Adafruit_NeoPixel(pinnum,pin,NEO_RGB+NEO_KHZ800);
+void setup() {
+  Serial.begin(115200); // use the serial port
+  TIMSK0 = 0; // turn off timer0 for lower jitter
+  ADCSRA = 0xe5; // set the adc to free running mode
+  ADMUX = 0x40; // use adc0
+  DIDR0 = 0x01; // turn off the digital input for adc0
+}
+
+void loop() {
+  while(1) { // reduces jitter
+    cli();  // UDRE interrupt slows this way down on arduino1.0
+    for (int i = 0 ; i < 512 ; i += 2) { // save 256 samples
+      while(!(ADCSRA & 0x10)); // wait for adc to be ready
+      ADCSRA = 0xf5; // restart adc
+      byte m = ADCL; // fetch adc data
+      byte j = ADCH;
+      int k = (j << 8) | m; // form into an int
+      k -= 0x0200; // form into a signed int
+      k <<= 6; // form into a 16b signed int
+      fft_input[i] = k; // put real data into even bins
+      fft_input[i+1] = 0; // set odd bins to 0
+    }
+    fft_window(); // window the data for better frequency response
+    fft_reorder(); // reorder the data before doing the fft
+    fft_run(); // process the data in the fft
+    fft_mag_log(); // take the output of the fft
+    sei();
+    for (byte i = 0 ; i < FFT_N/16 ; i++) { 
+      Serial.print(fft_log_out[i]); // send out the data
+      Serial.print(" "); // send out the data
+      if(fft_log_out[i]>=200) boom(10);
+      if(fft_log_out[i]>=180&&fft_log_out[i]<200) boom(9);
+      if(fft_log_out[i]>=160&&fft_log_out[i]<180) light(8);
+      if(fft_log_out[i]>=140&&fft_log_out[i]<160) light(7);
+      if(fft_log_out[i]>=120&&fft_log_out[i]<140) light(6);
+      if(fft_log_out[i]>=100&&fft_log_out[i]<120) light(5);
+      if(fft_log_out[i]>=80&&fft_log_out[i]<100) light(4);
+      if(fft_log_out[i]>=60&&fft_log_out[i]<80) light(3);
+      if(fft_log_out[i]>=40&&fft_log_out[i]<60) light(2);
+      if(fft_log_out[i]<40) light(1);
+    }
+    Serial.println(""); // send out the data
+  }
+}
+
+void light(int i){
+	for(int j=1;j<=10;j++){
+		strip.setColor(j,stripColor(r[i],g[i],b[i]));
+		strip.show();
+		delay(1000);
+	}
+}
+
+void boom(int i){
+	for(int k=1;;k++){
+		for(int j=1;j<=10;j++){
+			strip.setColor(i,stripColor(r[i],g[i],b[i]));
+			strip.show();
+			delay(5)
+		}
+	}
+}

@@ -1,0 +1,105 @@
+/*
+fft_adc_serial.pde
+guest openmusiclabs.com 7.7.14
+example sketch for testing the fft library.
+it takes in data on ADC0 (Analog0) and processes them
+with the fft. the data is sent out over the serial
+port at 115.2kb.
+*/
+
+#define LOG_OUT 1 // use the log output function
+#define FFT_N 256 // set to 256 point fft
+
+#include <FFT.h> // include the library
+int h1=10,h2=11,h3=12,h4=13;
+
+void setup() {
+  Serial.begin(115200); // use the serial port
+  TIMSK0 = 0; // turn off timer0 for lower jitter
+  ADCSRA = 0xe5; // set the adc to free running mode
+  ADMUX = 0x40; // use adc0
+  DIDR0 = 0x01; // turn off the digital input for adc0
+  for(int j=10;j<=13;j++) pinMode(j,OUTPUT);
+}
+
+void loop() {
+  while(1) { // reduces jitter
+    cli();  // UDRE interrupt slows this way down on arduino1.0
+    for (int i = 0 ; i < 512 ; i += 2) { // save 256 samples
+      while(!(ADCSRA & 0x10)); // wait for adc to be ready
+      ADCSRA = 0xf5; // restart adc
+      byte m = ADCL; // fetch adc data
+      byte j = ADCH;
+      int k = (j << 8) | m; // form into an int
+      k -= 0x0200; // form into a signed int
+      k <<= 6; // form into a 16b signed int
+      fft_input[i] = k; // put real data into even bins
+      fft_input[i+1] = 0; // set odd bins to 0
+    }
+    fft_window(); // window the data for better frequency response
+    fft_reorder(); // reorder the data before doing the fft
+    fft_run(); // process the data in the fft
+    fft_mag_log(); // take the output of the fft
+    sei();
+    for (byte i = 0 ; i < FFT_N/16 ; i++) { 
+      Serial.print(fft_log_out[i]); // send out the data
+      Serial.print(" "); // send out the data
+      if(fft_log_out[i]>=200) boom();
+      if(fft_log_out[i]>=100&&fft_log_out[i]<200) rainbow(4000);
+      if(fft_log_out[i]>=160&&fft_log_out[i]<180) rainbow(3000);
+      if(fft_log_out[i]>=140&&fft_log_out[i]<160) rainbow(2000);
+      if(fft_log_out[i]>=120&&fft_log_out[i]<140) rainbow(1200);
+      if(fft_log_out[i]>=100&&fft_log_out[i]<120) rainbow(400);
+      if(fft_log_out[i]>=80&&fft_log_out[i]<100) rainbow(20);
+      if(fft_log_out[i]>=60&&fft_log_out[i]<80) rainbow(5);
+      if(fft_log_out[i]>=40&&fft_log_out[i]<60) rainbow(5);
+      if(fft_log_out[i]>=20&&fft_log_out[i]<40) rainbow(5);
+      if(fft_log_out[i]>=10&&fft_log_out[i]<20) rainbow(5);
+    }
+    Serial.println(""); // send out the data
+  }
+}
+
+void boom(){
+      for(int j=h1;j<=h4;j++){
+        digitalWrite(j,HIGH);
+        delay(5000);
+      }
+      for(int j=h1;j<=h4;j++){
+        digitalWrite(j,LOW);
+        delay(5000);
+      }
+}
+
+void rainbow(int f){
+  for(int k=1;k<=12;k++){
+    if(k%4==0){
+      digitalWrite(h1,HIGH);
+      digitalWrite(h2,LOW);
+      digitalWrite(h3,LOW);
+      digitalWrite(h4,LOW);
+      delay(f);
+    }
+    if(k%4==1){
+      digitalWrite(h2,HIGH);
+      digitalWrite(h1,LOW);
+      digitalWrite(h3,LOW);
+      digitalWrite(h4,LOW);
+      delay(f);
+    }
+    if(k%4==2){
+      digitalWrite(h3,HIGH);
+      digitalWrite(h2,LOW);
+      digitalWrite(h1,LOW);
+      digitalWrite(h4,LOW);
+      delay(f);
+    }
+    if(k%4==3){
+      digitalWrite(h4,HIGH);
+      digitalWrite(h2,LOW);
+      digitalWrite(h3,LOW);
+      digitalWrite(h1,LOW);
+      delay(f);
+    }
+  }
+}
